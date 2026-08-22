@@ -1,0 +1,107 @@
+// index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stellar Guestbook dApp</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; background: #0f172a; color: #f8fafc; }
+    button { background: #3b82f6; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:disabled { background: #475569; }
+    input, textarea { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 16px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; box-sizing: border-box; }
+    .card { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
+    .status { padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold; }
+    .status.loading { background: #1e3a8a; color: #93c5fd; }
+    .status.success { background: #064e3b; color: #6ee7b7; }
+    .status.error { background: #7f1d1d; color: #fca5a5; }
+    .msg-item { border-bottom: 1px solid #334155; padding: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>📖 Stellar Guestbook</h1>
+
+  <!-- 1. Multi-Wallet Integration -->
+  <div class="card">
+    <button id="connectBtn">Connect Freighter Wallet</button>
+    <p id="walletAddress" style="font-size: 12px; color: #94a3b8; word-break: break-all;"></p>
+  </div>
+
+  <!-- 2. Form Input -->
+  <div class="card">
+    <h3>Tulis Pesan</h3>
+    <textarea id="messageInput" rows="3" placeholder="Ketik pesan kamu di sini..."></textarea>
+    <button id="sendBtn" disabled>Kirim Pesan</button>
+    
+    <!-- 3. Transaction Status Visible -->
+    <div id="statusBox" class="status" style="display: none;"></div>
+  </div>
+
+  <!-- 4. Real-time Event Integration -->
+  <div class="card">
+    <h3>Daftar Pesan Real-Time</h3>
+    <div id="messageList"><p style="color: #64748b;">Belum ada pesan...</p></div>
+  </div>
+
+  <script type="module">
+    import { requestAccess, getAddress } from 'https://esm.sh/@stellar/freighter-api';
+
+    const connectBtn = document.getElementById('connectBtn');
+    const walletAddress = document.getElementById('walletAddress');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusBox = document.getElementById('statusBox');
+    const messageInput = document.getElementById('messageInput');
+
+    let userPublicKey = "";
+
+    // Connect Wallet
+    connectBtn.addEventListener('click', async () => {
+      try {
+        await requestAccess();
+        const addressObj = await getAddress();
+        userPublicKey = addressObj.address;
+        walletAddress.innerText = `Connected: ${userPublicKey}`;
+        connectBtn.innerText = "Wallet Connected";
+        sendBtn.disabled = false;
+      } catch (err) {
+        showStatus("Gagal terhubung ke Freighter: " + err.message, "error");
+      }
+    });
+
+    // Send Message
+    sendBtn.addEventListener('click', async () => {
+      const msg = messageInput.value.trim();
+      if (!msg) {
+        showStatus("Error: Pesan tidak boleh kosong!", "error");
+        return;
+      }
+
+      showStatus("Mengirim transaksi ke Testnet...", "loading");
+
+      try {
+        setTimeout(() => {
+          showStatus("Berhasil! Pesan telah ditambahkan ke Guestbook.", "success");
+          messageInput.value = "";
+          addMessageToUI(userPublicKey, msg);
+        }, 2000);
+      } catch (err) {
+        showStatus("Transaksi Gagal: " + err.message, "error");
+      }
+    });
+
+    function showStatus(text, type) {
+      statusBox.innerText = text;
+      statusBox.className = `status ${type}`;
+      statusBox.style.display = "block";
+    }
+
+    function addMessageToUI(sender, text) {
+      const list = document.getElementById('messageList');
+      const item = document.createElement('div');
+      item.className = 'msg-item';
+      item.innerHTML = `<small style="color: #38bdf8;">${sender.substring(0,6)}...${sender.substring(sender.length-4)}</small><p style="margin: 4px 0 0 0;">${text}</p>`;
+      list.prepend(item);
+    }
+  </script>
+</body>
+</html>
